@@ -1,0 +1,20 @@
+Structure book algo:
+- Create a dataset for chapter change
+- Try creating a structured book once
+
+AIM: Divide into single digestable topics [can be one scene or one topic explaination]
+
+[summary1]  [summary2]  [summary3] .... 
+Scene1     Scene2     Scene3 ....
+Store as a directed graph.
+
+           chapter1
+    topicheading1             .....         topichead2
+thm1    proof1    explain1    .....  thmk  explaink    
+
+Method1:
+- Get paragraph embeddings
+- Compare adjacent embeddings to see if they are about the same thing.
+
+Method2:
+- Use llm to detect prompt:"para1 <sep> para2 Is a continuation?"
