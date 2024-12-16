@@ -6,3 +6,4 @@ ebooklib
 pdfplumber
 pypdf
 nltk
+python-multipart
