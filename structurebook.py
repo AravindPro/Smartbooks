@@ -1,44 +1,141 @@
+from concurrent.futures import ThreadPoolExecutor
 import json 
 from bs4 import BeautifulSoup
 import ebooklib
 from ebooklib import epub
+from nltk.tokenize import TextTilingTokenizer
+import pdfplumber
+from pypdf import PdfReader
+
 
 def gettextfromhtml(html):
 	soup = BeautifulSoup(html, 'html.parser')
 	text = soup.get_text()
 	return text
 
-def read_epub(epub_path):
-	# Load the EPUB file
-	book = epub.read_epub(epub_path)
+class SmartBook:
+	def __init__(self):
+		self.bookjson = {"contents": {}}
+		self.title = ""
+	def load(self, filename):
+		with open(filename) as f:
+			self.bookjson = json.load(f)
+			self.title = filename.split('/')[-1].split('.')[0]
+	def save(self):
+		with open(f'StructuredBooks/{self.title}.json', 'w') as f:
+			json.dump(self.bookjson, f, indent=4)
+	def concurrent_read_epub(self, epub_path):
+		def process_chapter(args):
+			pageno, chapter = args
+			content = chapter.get_body_content()
+			text = gettextfromhtml(content)  # Process the content as needed
+			try:
+				return str(pageno), list(map(lambda i: i.strip(), tokenizer.tokenize(text)))
+			except Exception as e:
+				return str(pageno), [text.strip(),]
+		# Load the EPUB file
+		book = epub.read_epub(epub_path)
+		tokenizer = TextTilingTokenizer()
 
-	text = ""
-	# Print metadata (title, author, etc.)
-	title = book.get_metadata('DC', 'title')
-	author = book.get_metadata('DC', 'creator')
-	print(f"Title: {title[0] if title else 'Unknown'}")
-	print(f"Author: {author[0] if author else 'Unknown'}")
+		# Print metadata (title, author, etc.)
+		title = book.get_metadata('DC', 'title')
+		author = book.get_metadata('DC', 'creator')
 
-	# Extract and print the text content from each chapter
-	for item in book.get_items_of_type(ebooklib.ITEM_DOCUMENT):
-		# if item.get_type() == ebooklib.ITEM_DOCUMENT:
-			# Get the HTML content
-			content = item.get_body_content()
-			text += '\n'+gettextfromhtml(content)  # You can also process the content as needed
-		# else:
-		# 	print(f"Skipping item: {item.get_type()}")
-	return text
+		self.title = epub_path.split('/')[-1].split('.')[0].replace(' ', '_')
+		chapters = list(book.get_items_of_type(ebooklib.ITEM_DOCUMENT))
+		# Extract and print the text content from each chapter
+		
+		with ThreadPoolExecutor() as executor:
+			results = executor.map(process_chapter, enumerate(chapters))
+
+		for pageno, tokens in results:
+			self.bookjson['contents'][pageno] = tokens
+
+	def read_epub(self, epub_path):
+		# Load the EPUB file
+		book = epub.read_epub(epub_path)
+		tokenizer = TextTilingTokenizer()
+
+		# Print metadata (title, author, etc.)
+		title = book.get_metadata('DC', 'title')
+		author = book.get_metadata('DC', 'creator')
+
+		self.title = title[0] if title else 'Unknown'
+
+		chapters = list(book.get_items_of_type(ebooklib.ITEM_DOCUMENT))
+		# Extract and print the text content from each chapter
+		for pageno, chapter in enumerate(chapters):
+			# if item.get_type() == ebooklib.ITEM_DOCUMENT:
+				# Get the HTML content
+				content = chapter.get_body_content()
+				text = gettextfromhtml(content)  # You can also process the content as needed
+				try:
+					self.bookjson['contents'][str(pageno)] = list(map(lambda i: i.strip(), tokenizer.tokenize(text)))
+				except Exception as e:
+					self.bookjson['contents'][str(pageno)] = [text.strip(),]
+	def concurrent_read_pdf(self, pdf_path):
+		def process_page(page):
+			text = page.extract_text()
+			try:
+				return list(map(lambda i: i.strip(), tokenizer.tokenize(text)))
+			except Exception as e:
+				return [text.strip(),]
+		tokenizer = TextTilingTokenizer()
+
+		# Extract book name
+		self.title = pdf_path.split('/')[-1].split('.')[0].replace(' ', '_')
+
+		self.bookjson['contents']["0"] = []
+		# with pdfplumber.open(pdf_path) as pdf:
+		reader = PdfReader(pdf_path)
+		with ThreadPoolExecutor() as executor:
+			results = executor.map(process_page, reader.pages)
+		for splitpage in results:
+			self.bookjson['contents']["0"].extend(splitpage)
+	def read_pdf(self, pdf_path: str):
+
+		tokenizer = TextTilingTokenizer()
+		self.bookjson['contents']["0"] = []
+		reader = PdfReader(pdf_path)
+
+		# getting a specific page from the pdf file
+		# page = reader.pages[0]
+
+		# extracting text from page
+		# text = page.extract_text()
+		# with pdfplumber.open(pdf_path) as pdf:
+		for page in reader.pages:
+			text = page.extract_text()
+			try:
+				textsections = tokenizer.tokenize(text)
+				self.bookjson['contents']["0"].extend(textsections)
+			except Exception as e:
+				self.bookjson['contents']["0"].append(text)
+	
+	def getpiece(self, chapterno, index, WORDLIMIT=150, splittext='\n'):
+		piecetext = ""
+		chapnext = chapterno
+		inext = index
+		while (len(piecetext.split()) < WORDLIMIT and inext != -1 and chapnext != -1):
+			piecetext += splittext+self.bookjson['contents'][str(chapnext)][inext]
+			if (inext+1 < len(self.bookjson['contents'][str(chapnext)])):
+				inext = inext+1
+			elif (chapnext+1 < len(self.bookjson['contents'])):
+				inext = 0
+				chapnext = chapnext+1
+				break
+			else:
+				inext = -1
+				chapnext = -1
+				break
+		return {"text": piecetext, 'chap': chapnext, 'ind': inext}
+		
+	
+
 
 if __name__=="__main__":
-	with open('StructuredBooks/bluecastle.json', 'w') as j:
-		with open('BlueCastle.txt') as f:
-			text = f.read()
-		
-		splittext = text.split('-----------------------------')
-		sdict = {}
-		sdict['contents'] = {}
-
-		for i in range(len(splittext)):
-			sdict['contents'][i] = [txt.strip() for txt in splittext[i].strip().split('\n\n')]
-		
-		json.dump(sdict, j)
+	pdf_path = 'temp/llmpaper.pdf'
+	book = SmartBook()
+	book.concurrent_read_pdf(pdf_path)
+	book.save()
+	print(book.bookjson)
