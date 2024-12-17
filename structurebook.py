@@ -6,7 +6,7 @@ from ebooklib import epub
 from nltk.tokenize import TextTilingTokenizer
 import pdfplumber
 from pypdf import PdfReader
-
+import g4f
 
 def gettextfromhtml(html):
 	soup = BeautifulSoup(html, 'html.parser')
@@ -112,11 +112,20 @@ class SmartBook:
 			except Exception as e:
 				self.bookjson['contents']["0"].append(text)
 	
-	def getpiece(self, chapterno, index, WORDLIMIT=150, splittext='\n'):
-		piecetext = ""
+	def getpiece(self, chapterno, index, WORDLIMIT=200, splittext='\n'):
 		chapnext = chapterno
 		inext = index
-		while (len(piecetext.split()) < WORDLIMIT and inext != -1 and chapnext != -1):
+		piecetext = self.bookjson['contents'][str(chapnext)][inext]
+		if (inext+1 < len(self.bookjson['contents'][str(chapnext)])):
+			inext = inext+1
+		elif (chapnext+1 < len(self.bookjson['contents'])):
+			inext = 0
+			chapnext = chapnext+1
+		else:
+			inext = -1
+			chapnext = -1
+
+		while (len(piecetext.split())+len(self.bookjson['contents'][str(chapnext)][inext].split()) < WORDLIMIT and inext != -1 and chapnext != -1):
 			piecetext += splittext+self.bookjson['contents'][str(chapnext)][inext]
 			if (inext+1 < len(self.bookjson['contents'][str(chapnext)])):
 				inext = inext+1
@@ -134,8 +143,17 @@ class SmartBook:
 
 
 if __name__=="__main__":
-	pdf_path = 'temp/llmpaper.pdf'
+	# pdf_path = 'temp/llmpaper.pdf'
 	book = SmartBook()
-	book.concurrent_read_pdf(pdf_path)
-	book.save()
-	print(book.bookjson)
+	book.load('StructuredBooks/llmpaper.json')
+	# book.concurrent_read_pdf(pdf_path)
+	# book.save()
+	# print(book.bookjson)
+	text = book.getpiece(0, 0, WORDLIMIT=1000)['text']
+	print(text)
+	print('------------------------')
+	query = f"Shorten the following in simple language in english with little bit of excitement within {len(text.split())/3} words: \n\n{text}"
+
+	reply = g4f.ChatCompletion.create(model="gpt-3.5-turbo", messages=[{"role": "user", "content": query}])
+	print(f"Original size: {len(text.split())}, New: {len(reply.split())}")
+	print(reply)

@@ -45,15 +45,16 @@ def nextpiece(bookname: str, chapno: int, index: int, WORDLIMIT: int = 150):
 @app.post("/nextpiecegpt")
 def nextpiecegpt(bookname: str, chapno: int, index: int, styletokens: str = "simple language", WORDLIMIT: int = 150, COMPRESSIONRATIO:float =1.2):
 	try:
-		res = nextpiece(bookname, chapno, index, int(WORDLIMIT*COMPRESSIONRATIO))
+		res = nextpiece(bookname, chapno, index, WORDLIMIT)
 		if 'error' in res:
 			return res
 		piecetext = res['text']
+		numwords = len(piecetext.split())
 
 		if COMPRESSIONRATIO > 2:
-			gptprompt = f"Summarize the following text in english in {styletokens} within {WORDLIMIT} words. Ensure that no additional information not present in the context isn't added:\n\n{piecetext}"
+			gptprompt = f"Shorten the following text in english in {styletokens} in {numwords/COMPRESSIONRATIO} words. Ensure that no additional information not present in the context isn't added:\n\n{piecetext}"
 		else:
-			gptprompt = f"Rewrite the following text in english in {styletokens}. Ensure that no additional information not present in the context isn't added:\n\n{piecetext}"
+			gptprompt = f"Rewrite the following text in english in {styletokens} in {numwords/COMPRESSIONRATIO} words. Ensure that no additional information not present in the context isn't added:\n\n{piecetext}"
 		# Get the GPT response
 		reply = gptresponse(gptprompt)
 		
