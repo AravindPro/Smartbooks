@@ -41,6 +41,17 @@ def nextpiece(bookname: str, chapno: int, index: int, WORDLIMIT: int = 150):
 		return res
 	except Exception as e:
 		return {"error": str(e)}
+@app.post("/prevpiece")
+def prevpiece(bookname: str, chapno: int, index: int, WORDLIMIT: int = 150):
+	# Load the smartbook
+	try:
+		sbook = SmartBook()
+		sbook.load(f'StructuredBooks/{bookname}')
+		# Get the next piece
+		res = sbook.previouspiece(chapno, index, WORDLIMIT)
+		return res
+	except Exception as e:
+		return {"error": str(e)}
 	
 @app.post("/nextpiecegpt")
 def nextpiecegpt(bookname: str, chapno: int, index: int, styletokens: str = "simple language", WORDLIMIT: int = 150, COMPRESSIONRATIO:float =1.2):

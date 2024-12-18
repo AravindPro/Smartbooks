@@ -4,9 +4,12 @@ from bs4 import BeautifulSoup
 import ebooklib
 from ebooklib import epub
 from nltk.tokenize import TextTilingTokenizer
+import nltk 
 import pdfplumber
 from pypdf import PdfReader
 import g4f
+
+nltk.download('stopwords')
 
 def gettextfromhtml(html):
 	soup = BeautifulSoup(html, 'html.parser')
@@ -84,12 +87,14 @@ class SmartBook:
 
 		# Extract book name
 		self.title = pdf_path.split('/')[-1].split('.')[0].replace(' ', '_')
-
+		print(self.title)
 		self.bookjson['contents']["0"] = []
 		# with pdfplumber.open(pdf_path) as pdf:
 		reader = PdfReader(pdf_path)
+		print("Here")
 		with ThreadPoolExecutor() as executor:
 			results = executor.map(process_page, reader.pages)
+		print(results)
 		for splitpage in results:
 			self.bookjson['contents']["0"].extend(splitpage)
 	def read_pdf(self, pdf_path: str):
@@ -139,7 +144,34 @@ class SmartBook:
 				break
 		return {"text": piecetext, 'chap': chapnext, 'ind': inext}
 		
-	
+	def previouspiece(self, chapterno, index, WORDLIMIT=200, splittext='\n'):
+		chapprev = chapterno
+		iprev = index
+		if iprev > 0:
+			iprev -= 1
+		elif chapprev > 0:
+			chapprev -= 1
+			iprev = len(self.bookjson['contents'][str(chapprev)]) - 1
+		else:
+			iprev = -1
+			chapprev = -1
+			return {"text": "", 'chap': chapterno, 'ind': index}
+		piecetext = self.bookjson['contents'][str(chapprev)][iprev]
+
+		while (len(piecetext.split()) + len(self.bookjson['contents'][str(chapprev)][iprev].split()) < WORDLIMIT 
+			and iprev != -1 and chapprev != -1):
+			piecetext = self.bookjson['contents'][str(chapprev)][iprev] + splittext + piecetext
+			if iprev > 0:
+				iprev -= 1
+			elif chapprev > 0:
+				chapprev -= 1
+				iprev = len(self.bookjson['contents'][str(chapprev)]) - 1
+				break
+			else:
+				iprev = -1
+				chapprev = -1
+				break
+		return {"text": piecetext, 'chap': chapterno, 'ind': index}
 
 
 if __name__=="__main__":
