@@ -156,7 +156,18 @@ class SmartBook:
 			iprev = -1
 			chapprev = -1
 			return {"text": "", 'chap': chapprev, 'ind': iprev}
+		
 		piecetext = self.bookjson['contents'][str(chapprev)][iprev]
+
+		if iprev > 0:
+			iprev -= 1
+		elif chapprev > 0:
+			chapprev -= 1
+			iprev = len(self.bookjson['contents'][str(chapprev)]) - 1
+		else:
+			iprev = -1
+			chapprev = -1
+			return {"text": piecetext, 'chap': chapprev, 'ind': iprev}
 
 		while (len(piecetext.split()) + len(self.bookjson['contents'][str(chapprev)][iprev].split()) < WORDLIMIT 
 			and iprev != -1 and chapprev != -1):
