@@ -63,9 +63,9 @@ def nextpiecegpt(bookname: str, chapno: int, index: int, styletokens: str = "sim
 		numwords = len(piecetext.split())
 
 		if COMPRESSIONRATIO > 2:
-			gptprompt = f"Shorten the following text in english in {styletokens} in {numwords/COMPRESSIONRATIO} words. Ensure that no additional information not present in the context isn't added:\n\n{piecetext}"
+			gptprompt = f"Shorten the following text in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information not present in the context isn't added:\n\n{piecetext}"
 		else:
-			gptprompt = f"Rewrite the following text in english in {styletokens} in {numwords/COMPRESSIONRATIO} words. Ensure that no additional information not present in the context isn't added:\n\n{piecetext}"
+			gptprompt = f"Rewrite the following text in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information not present in the context isn't added:\n\n{piecetext}"
 		# Get the GPT response
 		reply = gptresponse(gptprompt)
 		
