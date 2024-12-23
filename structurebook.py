@@ -1,5 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
-import json 
+import json
+import os
+from pathlib import Path 
 from bs4 import BeautifulSoup
 import ebooklib
 from ebooklib import epub
@@ -79,6 +81,7 @@ class SmartBook:
 	def concurrent_read_pdf(self, pdf_path):
 		def process_page(page):
 			text = page.extract_text()
+			images = page.ex
 			try:
 				return list(map(lambda i: i.strip(), tokenizer.tokenize(text)))
 			except Exception as e:
@@ -87,6 +90,7 @@ class SmartBook:
 
 		# Extract book name
 		self.title = pdf_path.split('/')[-1].split('.')[0].replace(' ', '_')
+		os.makedirs(f'{Path(__file__).parent}/StructuredBooks/{self.title}', exist_ok=True)
 		print(self.title)
 		self.bookjson['contents']["0"] = []
 		# with pdfplumber.open(pdf_path) as pdf:
@@ -130,14 +134,13 @@ class SmartBook:
 			inext = -1
 			chapnext = -1
 
-		while (len(piecetext.split())+len(self.bookjson['contents'][str(chapnext)][inext].split()) < WORDLIMIT and inext != -1 and chapnext != -1):
+		while ((len(piecetext.split())+len(self.bookjson['contents'][str(chapnext)][inext].split()) < WORDLIMIT) and inext != -1 and chapnext != -1):
 			piecetext += splittext+self.bookjson['contents'][str(chapnext)][inext]
 			if (inext+1 < len(self.bookjson['contents'][str(chapnext)])):
 				inext = inext+1
 			elif (chapnext+1 < len(self.bookjson['contents'])):
 				inext = 0
 				chapnext = chapnext+1
-				break
 			else:
 				inext = -1
 				chapnext = -1
@@ -186,17 +189,17 @@ class SmartBook:
 
 
 if __name__=="__main__":
-	# pdf_path = 'temp/llmpaper.pdf'
+	pdf_path = 'ExamplesBooks/design.epub'
 	book = SmartBook()
-	book.load('StructuredBooks/llmpaper.json')
-	# book.concurrent_read_pdf(pdf_path)
-	# book.save()
+	# book.load('StructuredBooks/aibook.json')
+	book.concurrent_read_epub(pdf_path)
+	book.save()
 	# print(book.bookjson)
-	text = book.getpiece(0, 0, WORDLIMIT=1000)['text']
-	print(text)
-	print('------------------------')
-	query = f"Shorten the following in simple language in english with little bit of excitement within {len(text.split())/3} words: \n\n{text}"
+	# text = book.getpiece(0, 0, WORDLIMIT=1000)['text']
+	# print(text)
+	# print('------------------------')
+	# query = f"Shorten the following in simple language in english with little bit of excitement within {len(text.split())/3} words: \n\n{text}"
 
-	reply = g4f.ChatCompletion.create(model="gpt-3.5-turbo", messages=[{"role": "user", "content": query}])
-	print(f"Original size: {len(text.split())}, New: {len(reply.split())}")
-	print(reply)
+	# reply = g4f.ChatCompletion.create(model="gpt-3.5-turbo", messages=[{"role": "user", "content": query}])
+	# print(f"Original size: {len(text.split())}, New: {len(reply.split())}")
+	# print(reply)
