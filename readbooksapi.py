@@ -4,8 +4,11 @@ import json
 import g4f
 from fastapi.middleware.cors import CORSMiddleware
 from structurebook import SmartBook
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
+
+app.mount("/images", StaticFiles(directory="./StructuredBooks/images"), name="images folder")
 
 app.add_middleware(
     CORSMiddleware,

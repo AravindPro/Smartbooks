@@ -1,7 +1,10 @@
 from concurrent.futures import ThreadPoolExecutor
+import io
 import json
 import os
-from pathlib import Path 
+from pathlib import Path
+import re
+import threading 
 from bs4 import BeautifulSoup
 import ebooklib
 from ebooklib import epub
@@ -10,6 +13,8 @@ import nltk
 import pdfplumber
 from pypdf import PdfReader
 import g4f
+from PIL import Image
+import markdownify
 
 nltk.download('stopwords')
 
@@ -17,6 +22,39 @@ def gettextfromhtml(html):
 	soup = BeautifulSoup(html, 'html.parser')
 	text = soup.get_text()
 	return text
+
+def getmdfromxml(xml):
+	soup = BeautifulSoup(xml, 'html.parser')
+	try:
+		text = markdownify.markdownify(str(soup.html))
+		
+	except Exception as e:
+		text = soup.get_text()
+
+	return text
+
+
+def getimagespathsfromhtml(html):
+	soup = BeautifulSoup(html, 'html.parser')
+	images = soup.find_all('img')
+	return list(map(lambda i: i['src'], images))
+
+def clean_text(text):
+	cleaned_text = re.sub(r'[^\x20-\x7E]', '', text)
+	return cleaned_text
+
+
+def smart_markdownify(text):
+    lines = text.split('\n')
+    markdown = []
+    for line in lines:
+        if line.strip().endswith(":"):  # Treat as heading
+            markdown.append(f"## {line.strip()}")
+        elif line.strip().startswith("-"):  # Treat as list
+            markdown.append(f"- {line.strip()[2:]}")
+        else:  # Treat as paragraph
+            markdown.append(line.strip())
+    return "\n\n".join(markdown)
 
 class SmartBook:
 	def __init__(self):
@@ -32,12 +70,42 @@ class SmartBook:
 	def concurrent_read_epub(self, epub_path):
 		def process_chapter(args):
 			pageno, chapter = args
-			content = chapter.get_body_content()
-			text = gettextfromhtml(content)  # Process the content as needed
+			content = chapter.content
+			text = getmdfromxml(content)  # Process the content as needed
+
+			def replacer(match):
+				original_alt = match.group(1)
+				original_link = match.group(2)
+				# print(original_alt, original_link)
+				basename = os.path.basename(original_link)
+				newlink = f'./images/{self.title}/{basename}'
+				return f"![{original_alt}]({newlink})"
+
+			# Replace the text image paths with actual image paths
+			image_pattern = r"!\[([^\]]*)\]\(([^)]+)\)"
+			text = re.sub(image_pattern, replacer, text)
+
+
+			imagepaths = getimagespathsfromhtml(content)
+			basenames = []
+			# Open and save the images
+			for imgpath in imagepaths:
+				normpath = os.path.normpath(imgpath)
+				cleanpath = os.path.relpath(normpath, os.pardir).replace('\\', '/')
+				basename = os.path.basename(imgpath)
+				# print(cleanpath, basename)
+				epubimage = book.get_item_with_href(cleanpath)
+				if epubimage is not None:
+					img = Image.open(io.BytesIO(epubimage.content))
+					img.save(f'{Path(__file__).parent}/StructuredBooks/images/{self.title}/{basename}')
+					basenames.append(basename)
+				else:
+					print("Image not found: ", imgpath)
+
 			try:
 				return str(pageno), list(map(lambda i: i.strip(), tokenizer.tokenize(text)))
 			except Exception as e:
-				return str(pageno), [text.strip(),]
+				return str(pageno), [text.strip(),]+basenames
 		# Load the EPUB file
 		book = epub.read_epub(epub_path)
 		tokenizer = TextTilingTokenizer()
@@ -47,6 +115,7 @@ class SmartBook:
 		author = book.get_metadata('DC', 'creator')
 
 		self.title = epub_path.split('/')[-1].split('.')[0].replace(' ', '_')
+		os.makedirs(f'{Path(__file__).parent}/StructuredBooks/images/{self.title}', exist_ok=True)
 		chapters = list(book.get_items_of_type(ebooklib.ITEM_DOCUMENT))
 		# Extract and print the text content from each chapter
 		
@@ -78,29 +147,47 @@ class SmartBook:
 					self.bookjson['contents'][str(pageno)] = list(map(lambda i: i.strip(), tokenizer.tokenize(text)))
 				except Exception as e:
 					self.bookjson['contents'][str(pageno)] = [text.strip(),]
+	
 	def concurrent_read_pdf(self, pdf_path):
+		imagecounter = 0
+		imagecounter_lock = threading.Lock()
+		tokenizer = TextTilingTokenizer()
+		
 		def process_page(page):
 			text = page.extract_text()
-			images = page.ex
+			images = page.images
+			nonlocal imagecounter
+			lstimages=[]
+			with imagecounter_lock:  # Ensure only one thread modifies imagecounter at a time
+				for img in images:
+					imagecounter += 1
+					lstimages.append(f'![](./images/{self.title}/image_{imagecounter}.png)')
+					try:
+						img.image.save(f'{Path(__file__).parent}/StructuredBooks/images/{self.title}/image_{imagecounter}.png', 'PNG')
+					except Exception as e:
+						print(f"Error saving image {imagecounter}: ", e)
+			
 			try:
-				return list(map(lambda i: i.strip(), tokenizer.tokenize(text)))
+				return list(map(lambda i: smart_markdownify(clean_text(i.strip())), tokenizer.tokenize(text)))+lstimages
 			except Exception as e:
-				return [text.strip(),]
-		tokenizer = TextTilingTokenizer()
-
+				return [smart_markdownify(clean_text(text.strip())),]+lstimages
+		
 		# Extract book name
 		self.title = pdf_path.split('/')[-1].split('.')[0].replace(' ', '_')
-		os.makedirs(f'{Path(__file__).parent}/StructuredBooks/{self.title}', exist_ok=True)
+		print(self.title)
+		# os.makedirs(f'{Path(__file__).parent}/StructuredBooks/{self.title}', exist_ok=True)
+		os.makedirs(f'{Path(__file__).parent}/StructuredBooks/images/{self.title}', exist_ok=True)
 		print(self.title)
 		self.bookjson['contents']["0"] = []
 		# with pdfplumber.open(pdf_path) as pdf:
 		reader = PdfReader(pdf_path)
-		print("Here")
+
 		with ThreadPoolExecutor() as executor:
 			results = executor.map(process_page, reader.pages)
-		print(results)
+		# print(results)
 		for splitpage in results:
 			self.bookjson['contents']["0"].extend(splitpage)
+
 	def read_pdf(self, pdf_path: str):
 
 		tokenizer = TextTilingTokenizer()
@@ -121,7 +208,7 @@ class SmartBook:
 			except Exception as e:
 				self.bookjson['contents']["0"].append(text)
 	
-	def getpiece(self, chapterno, index, WORDLIMIT=200, splittext='\n'):
+	def getpiece(self, chapterno, index, WORDLIMIT=200, splittext='\n\n'):
 		chapnext = chapterno
 		inext = index
 		piecetext = self.bookjson['contents'][str(chapnext)][inext]
@@ -189,10 +276,10 @@ class SmartBook:
 
 
 if __name__=="__main__":
-	pdf_path = 'ExamplesBooks/design.epub'
+	pdf_path = './temp/CPH.pdf'
 	book = SmartBook()
 	# book.load('StructuredBooks/aibook.json')
-	book.concurrent_read_epub(pdf_path)
+	book.concurrent_read_pdf(pdf_path)
 	book.save()
 	# print(book.bookjson)
 	# text = book.getpiece(0, 0, WORDLIMIT=1000)['text']

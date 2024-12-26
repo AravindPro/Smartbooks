@@ -7,3 +7,4 @@ pdfplumber
 pypdf
 nltk
 python-multipart
+markdownify
