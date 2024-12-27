@@ -28,7 +28,21 @@ Endpoints:
 def gptresponse(query: str):
 	return g4f.ChatCompletion.create(model="gpt-3.5-turbo", messages=[{"role": "user", "content": query}])
 	
-
+@app.get("/getsummary")
+def getsummary(text: str, styletokens: str = "simple language", COMPRESSIONRATIO:float =1.2):
+	try:
+		# Load the smartbook
+		numwords = len(text.split())
+		if COMPRESSIONRATIO > 2:
+				gptprompt = f"Shorten the following text in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information not present in the context isn't added:\n\n{piecetext}"
+		else:
+			gptprompt = f"Rewrite the following text in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information not present in the context isn't added:\n\n{piecetext}"
+		# Get the GPT response
+		reply = gptresponse(gptprompt)
+		
+		return {"summary": reply}
+	except Exception as e:
+		return {"error": str(e)}
 @app.get("/listbooks")
 def listbooks():
 	return {"books": os.listdir('StructuredBooks')}
