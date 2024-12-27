@@ -34,9 +34,9 @@ def getsummary(text: str, styletokens: str = "simple language", COMPRESSIONRATIO
 		# Load the smartbook
 		numwords = len(text.split())
 		if COMPRESSIONRATIO > 2:
-				gptprompt = f"Shorten the following text in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information not present in the context isn't added:\n\n{piecetext}"
+			gptprompt = f"Shorten the following text in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information not present in the context isn't added:\n\n{text}"
 		else:
-			gptprompt = f"Rewrite the following text in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information not present in the context isn't added:\n\n{piecetext}"
+			gptprompt = f"Rewrite the following text in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information not present in the context isn't added:\n\n{text}"
 		# Get the GPT response
 		reply = gptresponse(gptprompt)
 		
