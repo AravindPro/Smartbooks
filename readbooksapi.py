@@ -28,7 +28,7 @@ Endpoints:
 def gptresponse(query: str):
 	return g4f.ChatCompletion.create(model="gpt-3.5-turbo", messages=[{"role": "user", "content": query}])
 	
-@app.get("/getsummary")
+@app.post("/getsummary")
 def getsummary(text: str, styletokens: str = "simple language", COMPRESSIONRATIO:float =1.2):
 	try:
 		# Load the smartbook
