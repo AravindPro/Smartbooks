@@ -33,10 +33,12 @@ def getsummary(text: str, styletokens: str = "simple language", COMPRESSIONRATIO
 	try:
 		# Load the smartbook
 		numwords = len(text.split())
-		if COMPRESSIONRATIO > 2:
-			gptprompt = f"Shorten the following text in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information not present in the context isn't added:\n\n{text}"
+		if COMPRESSIONRATIO > 4:
+			gptprompt = f"Summarize key takeaways of the following text in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information (not present in the context) is added:\n\n{text}"
+		elif COMPRESSIONRATIO > 2:
+			gptprompt = f"Shorten the following text in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information (not present in the context) is added:\n\n{text}"
 		else:
-			gptprompt = f"Rewrite the following text in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information not present in the context isn't added:\n\n{text}"
+			gptprompt = f"Rewrite the following text in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information (not present in the context) is added:\n\n{text}"
 		# Get the GPT response
 		reply = gptresponse(gptprompt)
 		
@@ -80,9 +82,9 @@ def nextpiecegpt(bookname: str, chapno: int, index: int, styletokens: str = "sim
 		numwords = len(piecetext.split())
 
 		if COMPRESSIONRATIO > 2:
-			gptprompt = f"Shorten the following text in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information not present in the context isn't added:\n\n{piecetext}"
+			gptprompt = f"Shorten the following text in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information (not present in the context) is added:\n\n{piecetext}"
 		else:
-			gptprompt = f"Rewrite the following text in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information not present in the context isn't added:\n\n{piecetext}"
+			gptprompt = f"Rewrite the following text in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information (not present in the context) is added:\n\n{piecetext}"
 		# Get the GPT response
 		reply = gptresponse(gptprompt)
 		
