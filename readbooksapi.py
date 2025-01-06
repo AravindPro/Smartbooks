@@ -34,11 +34,14 @@ def getsummary(text: str, styletokens: str = "simple language", COMPRESSIONRATIO
 		# Load the smartbook
 		numwords = len(text.split())
 		if COMPRESSIONRATIO > 4:
-			gptprompt = f"Summarize key takeaways of the following text in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information (not present in the context) is added:\n\n{text}"
+			gptprompt = f"Summarize the key takeaways of the following text in English using the {styletokens} style. Present the summary in markdown format with approximately {int(numwords/COMPRESSIONRATIO)} words. Ensure the summary strictly reflects the content of the text without introducing any additional information.\n\n{text}"
+			# gptprompt = f"Summarize key takeaways of the following text in markdown in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information (not present in the context) is added:\n\n{text}"
 		elif COMPRESSIONRATIO > 2:
-			gptprompt = f"Shorten the following text in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information (not present in the context) is added:\n\n{text}"
+			gptprompt = f"Condense the following text in English using the {styletokens} style. Present the shortened version in markdown format with approximately {int(numwords/COMPRESSIONRATIO)} words. Ensure no additional information beyond the original content is included.\n\n{text}"
+			# gptprompt = f"Shorten the following text in markdown in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information (not present in the context) is added:\n\n{text}"
 		else:
-			gptprompt = f"Rewrite the following text in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information (not present in the context) is added:\n\n{text}"
+			gptprompt = f"Rewrite the following text in English using the {styletokens} style. Format the rewritten content in markdown with approximately {int(numwords/COMPRESSIONRATIO)} words. Ensure no additional information beyond the original context is included.\n\n{text}"
+			# gptprompt = f"Rewrite the following text in markdown in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information (not present in the context) is added:\n\n{text}"
 		# Get the GPT response
 		reply = gptresponse(gptprompt)
 		
@@ -109,7 +112,7 @@ def addbook(bookname: str):
 		return {"error": str(e)}
 
 
-@app.post("/upload/")
+@app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
     # Metadata
     filename = file.filename
