@@ -8,3 +8,4 @@ pypdf
 nltk
 python-multipart
 markdownify
+google-generativeai
