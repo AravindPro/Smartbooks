@@ -5,8 +5,14 @@ import g4f
 from fastapi.middleware.cors import CORSMiddleware
 from structurebook import SmartBook
 from fastapi.staticfiles import StaticFiles
+import google.generativeai as genai
 
 app = FastAPI()
+try:
+	genai.configure(api_key=os.environ['GEMINI_API_KEY'])
+	model = genai.GenerativeModel("gemini-1.5-flash")
+except:
+	exit('API key not found. Please set the GEMINI_API_KEY environment variable.')
 
 app.mount("/images", StaticFiles(directory="./StructuredBooks/images"), name="images folder")
 
@@ -25,8 +31,19 @@ Endpoints:
 - Nextpiecegpt(bookname, chapno, i, styletokens)
 """
 
-def gptresponse(query: str):
+def gptresponseold(query: str):
 	return g4f.ChatCompletion.create(model="gpt-3.5-turbo", messages=[{"role": "user", "content": query}])
+def gptresponse(query: str):
+	return model.generate_content(query).text
+
+@app.post("/query")
+def generalquery(text: str):
+	try:
+		# Get the GPT response
+		reply = gptresponse(text)
+		return {"text": reply}
+	except Exception as e:
+		return {"error": str(e)}
 	
 @app.post("/getsummary")
 def getsummary(text: str, styletokens: str = "simple language", COMPRESSIONRATIO:float =1.2):
