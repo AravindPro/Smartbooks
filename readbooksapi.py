@@ -51,16 +51,18 @@ def getsummary(text: str, styletokens: str = "simple language", COMPRESSIONRATIO
 		# Load the smartbook
 		numwords = len(text.split())
 		if COMPRESSIONRATIO > 4:
-			gptprompt = f"Summarize the key takeaways of the following text in English using the {styletokens} style. Present the summary in markdown format and use latex where required with approximately {int(numwords/COMPRESSIONRATIO)} words. Ensure the summary strictly reflects the content of the text without introducing any additional information.\n\n{text}"
+			gptprompt = f"Summarize the key takeaways of the following text in English using the {styletokens} style. Present the summary in markdown format and use latex where required with approximately {int(numwords/COMPRESSIONRATIO)} words. Ensure the summary strictly reflects the content of the text without introducing any additional information"
 			# gptprompt = f"Summarize key takeaways of the following text in markdown in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information (not present in the context) is added:\n\n{text}"
 		elif COMPRESSIONRATIO > 2:
-			gptprompt = f"Condense the following text in English using the {styletokens} style. Present the shortened version in markdown format and use latex where required with approximately {int(numwords/COMPRESSIONRATIO)} words. Ensure no additional information beyond the original content is included.\n\n{text}"
+			gptprompt = f"Condense the following text in English using the {styletokens} style. Present the shortened version in markdown format and use latex where required with approximately {int(numwords/COMPRESSIONRATIO)} words. Ensure no additional information beyond the original content is included"
 			# gptprompt = f"Shorten the following text in markdown in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information (not present in the context) is added:\n\n{text}"
 		else:
-			gptprompt = f"Rewrite the following text in English using the {styletokens} style. Format the rewritten content in markdown and use latex where required with approximately {int(numwords/COMPRESSIONRATIO)} words. Ensure no additional information beyond the original context is included.\n\n{text}"
+			gptprompt = f"Rewrite the following text in English using the {styletokens} style. Format the rewritten content in markdown and use latex where required with approximately {int(numwords/COMPRESSIONRATIO)} words. Ensure no additional information beyond the original context is included"
 			# gptprompt = f"Rewrite the following text in markdown in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information (not present in the context) is added:\n\n{text}"
 		# Get the GPT response
-		reply = gptresponse(gptprompt)
+		betterprompt = gptresponse(f"Re write prompt better: {gptprompt}")
+
+		reply = gptresponse(f"{betterprompt}:\n\n{text}")
 		
 		return {"summary": reply}
 	except Exception as e:
