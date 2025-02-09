@@ -50,7 +50,7 @@ def getsummary(text: str, styletokens: str = "simple language", COMPRESSIONRATIO
 	try:
 		# Load the smartbook
 		numwords = len(text.split())
-		gptprompt = f"Summarize or rewrite according to the compression of the following text in English. Ensure {styletokens} . Write in markdown format and use latex where required and reduce the amount of text by {COMPRESSIONRATIO}. Ensure the text strictly reflects the content of the text without introducing any additional information"
+		gptprompt = f"Summarize or rewrite according to the compression of the following text in English. Ensure {styletokens} . Write in markdown format and use latex where required within {int(numwords/COMPRESSIONRATIO)} words approximately. Ensure the text strictly reflects the content of the text without introducing any additional information"
 		# if COMPRESSIONRATIO > 4:
 		# 	gptprompt = f"Summarize the key takeaways of the following text in English using the {styletokens} style. Present the summary in markdown format and use latex where required with approximately {int(numwords/COMPRESSIONRATIO)} words. Ensure the summary strictly reflects the content of the text without introducing any additional information"
 		# 	# gptprompt = f"Summarize key takeaways of the following text in markdown in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information (not present in the context) is added:\n\n{text}"
