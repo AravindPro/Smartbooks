@@ -30,18 +30,41 @@ Endpoints:
 - Nextpiece(bookname, chapno, i)
 - Nextpiecegpt(bookname, chapno, i, styletokens)
 """
-
+response_schema = {
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "Title": {"type": "string"},
+            "Description": {"type": "string"},
+            "Category": {"type": "string"},
+            "Subcategory": {"type": "string"},
+            "EstimatedPrice": {"type": "string"}
+        },
+        "required": ["Title", "Description", "Category", "EstimatedPrice"]
+    }
+}
 def gptresponseold(query: str):
 	return g4f.ChatCompletion.create(model="gpt-3.5-turbo", messages=[{"role": "user", "content": query}])
 def gptresponse(query: str):
-	return model.generate_content(query).text
+	return model.generate_content(
+		query,
+		generation_config={
+			'response_mime_type': 'application/json',
+			# 'response_schema': response_schema
+		}
+		).text
 
 @app.post("/query")
 def generalquery(text: str):
 	try:
 		# Get the GPT response
-		reply = gptresponse(text)
-		return {"text": reply}
+		reply = gptresponse(f"Answer the following question response in the format {{\"text\": <response>}}:{text}")
+		print(reply)
+		parsed_data = json.loads(reply)
+		return {"text": parsed_data['text']}
+	# except json.JSONDecodeError as e:
+	# 	return generalquery(text)
 	except Exception as e:
 		return {"error": str(e)}
 	
@@ -50,7 +73,7 @@ def getsummary(text: str, styletokens: str = "simple language", COMPRESSIONRATIO
 	try:
 		# Load the smartbook
 		numwords = len(text.split())
-		gptprompt = f"Rewrite according to the compression of the following text in English by compressing from {numwords} to {int(numwords/COMPRESSIONRATIO)} words approximately. Write in markdown format and use latex where required. Ensure the text strictly reflects the content of the text without introducing any additional information"
+		gptprompt = f"Rewrite according to the compression of the following text in English by compressing by {int(100/COMPRESSIONRATIO)}% approximately. Write in markdown format and use latex where required. Ensure the text strictly reflects the content of the text without introducing any additional information."
 		# if COMPRESSIONRATIO > 4:
 		# 	gptprompt = f"Summarize the key takeaways of the following text in English using the {styletokens} style. Present the summary in markdown format and use latex where required with approximately {int(numwords/COMPRESSIONRATIO)} words. Ensure the summary strictly reflects the content of the text without introducing any additional information"
 		# 	# gptprompt = f"Summarize key takeaways of the following text in markdown in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information (not present in the context) is added:\n\n{text}"
@@ -61,13 +84,18 @@ def getsummary(text: str, styletokens: str = "simple language", COMPRESSIONRATIO
 		# 	gptprompt = f"Rewrite the following text in English using the {styletokens} style. Format the rewritten content in markdown and use latex where required with approximately {int(numwords/COMPRESSIONRATIO)} words. Ensure no additional information beyond the original context is included"
 			# gptprompt = f"Rewrite the following text in markdown in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information (not present in the context) is added:\n\n{text}"
 		# Get the GPT response
-		betterprompt = gptresponse(f"Re-write prompt better and shorter:\n\n {gptprompt}. Additional requirements: {styletokens}")
+		betterprompt = gptresponse(f"Re-write prompt better and shorter also reply strictly in the json format {{\"prompt\": <response>}}:\n\n {gptprompt}. Additional requirements: {styletokens}. ")
+		# print(betterprompt)
+		betterprompt = json.loads(betterprompt)['prompt']
 
-		reply = gptresponse(f"{betterprompt}:\n\n{text}")
+		response = gptresponse(f"{betterprompt} and reply strictly in the json format {{\"reply\": <response>}}:\n\n{text}")
+		# print(response)
+		response = json.loads(response)['reply']
 		
-		return {"summary": reply}
+		return {"summary": response}
 	except Exception as e:
 		return {"error": str(e)}
+	
 @app.get("/listbooks")
 def listbooks():
 	return {"books": os.listdir('StructuredBooks')}
