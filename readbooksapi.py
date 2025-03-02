@@ -59,7 +59,7 @@ def gptresponse(query: str):
 def generalquery(text: str):
 	try:
 		# Get the GPT response
-		reply = gptresponse(f"Answer the following question response in the format {{\"text\": <response>}}:{text}")
+		reply = gptresponse(f"Answer the following question response in the format {{\"text\": <text-response>}}:{text}")
 		print(reply)
 		parsed_data = json.loads(reply)
 		return {"text": parsed_data['text']}
@@ -88,7 +88,7 @@ def getsummary(text: str, styletokens: str = "simple language", COMPRESSIONRATIO
 		# print(betterprompt)
 		betterprompt = json.loads(betterprompt)['prompt']
 
-		response = gptresponse(f"{betterprompt} and reply strictly in the json format {{\"reply\": <response>}}:\n\n{text}")
+		response = gptresponse(f"{betterprompt} and reply strictly in the json format {{\"reply\": <text-response>}}:\n\n{text}")
 		# print(response)
 		response = json.loads(response)['reply']
 		
