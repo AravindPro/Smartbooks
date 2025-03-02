@@ -48,6 +48,10 @@ def gptresponseold(query: str):
 	return g4f.ChatCompletion.create(model="gpt-3.5-turbo", messages=[{"role": "user", "content": query}])
 def gptresponse(query: str):
 	return model.generate_content(
+		query
+		).text
+def gptresponsejson(query: str):
+	return model.generate_content(
 		query,
 		generation_config={
 			'response_mime_type': 'application/json',
@@ -59,7 +63,7 @@ def gptresponse(query: str):
 def generalquery(text: str):
 	try:
 		# Get the GPT response
-		reply = gptresponse(f"Answer the following question response in the format {{\"text\": <text-response>}}:{text}")
+		reply = gptresponsejson(f"Answer the following question response in the format {{\"text\": <text-response>}}:{text}")
 		print(reply)
 		parsed_data = json.loads(reply)
 		return {"text": parsed_data['text']}
@@ -84,13 +88,13 @@ def getsummary(text: str, styletokens: str = "simple language", COMPRESSIONRATIO
 		# 	gptprompt = f"Rewrite the following text in English using the {styletokens} style. Format the rewritten content in markdown and use latex where required with approximately {int(numwords/COMPRESSIONRATIO)} words. Ensure no additional information beyond the original context is included"
 			# gptprompt = f"Rewrite the following text in markdown in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information (not present in the context) is added:\n\n{text}"
 		# Get the GPT response
-		betterprompt = gptresponse(f"Re-write prompt better and shorter also reply strictly in the json format {{\"prompt\": <response>}}:\n\n {gptprompt}. Additional requirements: {styletokens}. ")
+		betterprompt = gptresponsejson(f"Re-write prompt better and shorter also reply strictly in the json format {{\"prompt\": <response>}}:\n\n {gptprompt}. Additional requirements: {styletokens}. ")
 		# print(betterprompt)
 		betterprompt = json.loads(betterprompt)['prompt']
 
-		response = gptresponse(f"{betterprompt} and reply strictly in the json format {{\"reply\": <text-response>}}:\n\n{text}")
+		response = gptresponse(f"{betterprompt}:\n\n{text}")
 		# print(response)
-		response = json.loads(response)['reply']
+		# response = json.loads(response)['reply']
 		
 		return {"summary": response}
 	except Exception as e:
