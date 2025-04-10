@@ -1,4 +1,5 @@
 import os
+from typing import List
 from fastapi import FastAPI, File, UploadFile
 import json
 import g4f
@@ -72,33 +73,23 @@ def generalquery(text: str):
 	except Exception as e:
 		return {"error": str(e)}
 	
-@app.post("/getsummary")
-def getsummary(text: str, styletokens: str = "simple language", COMPRESSIONRATIO:float =1.2):
+@app.post("/bookrewrite")
+def getsummary(prompt:str, text:str):
 	try:
-		# Load the smartbook
-		numwords = len(text.split())
-		gptprompt = f"Rewrite according to the compression of the following text in English by compressing by {100-int(100/COMPRESSIONRATIO)}% approximately. Write in markdown format and use latex where required. Ensure the text strictly reflects the content of the text without introducing any additional information."
-		# if COMPRESSIONRATIO > 4:
-		# 	gptprompt = f"Summarize the key takeaways of the following text in English using the {styletokens} style. Present the summary in markdown format and use latex where required with approximately {int(numwords/COMPRESSIONRATIO)} words. Ensure the summary strictly reflects the content of the text without introducing any additional information"
-		# 	# gptprompt = f"Summarize key takeaways of the following text in markdown in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information (not present in the context) is added:\n\n{text}"
-		# elif COMPRESSIONRATIO > 2:	
-		# 	gptprompt = f"Condense the following text in English using the {styletokens} style. Present the shortened version in markdown format and use latex where required with approximately {int(numwords/COMPRESSIONRATIO)} words. Ensure no additional information beyond the original content is included"
-		# 	# gptprompt = f"Shorten the following text in markdown in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information (not present in the context) is added:\n\n{text}"
-		# else:
-		# 	gptprompt = f"Rewrite the following text in English using the {styletokens} style. Format the rewritten content in markdown and use latex where required with approximately {int(numwords/COMPRESSIONRATIO)} words. Ensure no additional information beyond the original context is included"
-			# gptprompt = f"Rewrite the following text in markdown in english in {styletokens} in {int(numwords/COMPRESSIONRATIO)} words. Ensure that no additional information (not present in the context) is added:\n\n{text}"
-		# Get the GPT response
-		betterprompt = gptresponsejson(f"Re-write prompt better and shorter also reply strictly in the json format {{\"prompt\": <response>}}:\n\n {gptprompt}. Additional requirements: {styletokens}. ")
-		# print(betterprompt)
-		betterprompt = json.loads(betterprompt)['prompt']
-
-		response = gptresponse(f"{betterprompt}:\n\n{text}")
-		# print(response)
-		# response = json.loads(response)['reply']
-		
+		response = gptresponse(f"{prompt}. Return the rewritten content without any extra content:\n\n{text}")
 		return {"summary": response}
 	except Exception as e:
 		return {"error": str(e)}
+
+@app.post("/rewriteprompt")
+def rewriteprompt(characteristics:List[str]):
+	prompt = f"""Your task is to generate a simple text suitable prompt with the given characteristics. Note that it is a prompt to be executed on text from a book. Output the rewritten text prompt directly nothing extra.
+
+
+
+Characteristics to include in final prompt:{characteristics+["rewrite and return in markdown with latex for math equations"]}"""
+	return {"prompt":generalquery(prompt)['text']}
+
 	
 @app.get("/listbooks")
 def listbooks():
