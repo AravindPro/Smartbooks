@@ -64,10 +64,8 @@ def gptresponsejson(query: str):
 def generalquery(text: str):
 	try:
 		# Get the GPT response
-		reply = gptresponsejson(f"Answer the following question response in the format {{\"text\": <text-response>}}:{text}")
-		print(reply)
-		parsed_data = json.loads(reply)
-		return {"text": parsed_data['text']}
+		reply = gptresponse(text)
+		return {"text": reply}
 	# except json.JSONDecodeError as e:
 	# 	return generalquery(text)
 	except Exception as e:
@@ -77,7 +75,7 @@ def generalquery(text: str):
 def getsummary(prompt:str, text:str):
 	try:
 		response = gptresponse(f"{prompt}. Return the rewritten content without any extra content:\n\n{text}")
-		return {"summary": response}
+		return {"text": response}
 	except Exception as e:
 		return {"error": str(e)}
 
